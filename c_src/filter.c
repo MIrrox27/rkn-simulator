@@ -18,3 +18,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+
+typedef struct DomensBlackList { // Своеобразный связанный список 
+  char str[64]; // Поле для ввода 1 домена
+  struct DomensBlackList *next; // Указатель на сл элемент списка
+  } DomensBlackList;
+
+
+  DomensBlackList *global_list = NULL; // Указатель на первый элемент массива 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
