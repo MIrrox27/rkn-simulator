@@ -51,7 +51,7 @@ void delete_from_blacklist(const char *text){
     DomensBlackList *current_next = current->next;
 
 
-    if (strcmp(current->str, text)){
+    if (strcmp(current->str, text) == 0){
       if (prev == NULL) global_list = current_next;
       else prev->next = current_next;
       current = current_next;
