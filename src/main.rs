@@ -9,7 +9,11 @@ use tokio::{io::{ AsyncReadExt, AsyncWriteExt}, stream};
 use std::io;
 
 
-
+extern "C" {
+    fn delete_from_blacklist(text: str);
+    fn add_to_blacklist(text: str);
+    fn search_domen(text: str);
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
