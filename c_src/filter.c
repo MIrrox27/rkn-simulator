@@ -72,7 +72,7 @@ int search_domen(const char *text){ // Поиск домена в списке
   DomensBlackList *current_next = current->next;
 
   while (current != NULL){
-    if (stdcmp(current->str, text) == 0) return 1; // если домен есть вернет 1
+    if (strcmp(current->str, text) == 0) return 1; // если домен есть вернет 1
     current = current_next;
   }
   return 0;
