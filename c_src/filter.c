@@ -47,9 +47,10 @@ void delete_from_blacklist(const char *text){
 
   while (current != NULL){
     DomensBlackList *temp = current;
-
+    DomensBlackList *current_next = current->next;
     if (strcmp(current->str, text)){
       free(temp);
+      current = current_next;
     } 
     current = current->next;
   } 
