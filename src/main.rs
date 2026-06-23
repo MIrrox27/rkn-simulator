@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = addres.trim();    
     let addres = if addr.is_empty() {"127.0.0.1:8000".to_string()} else {addr.to_string()};
 
-    println!("Addres:{}", addres);
+    println!("Addres: http://{}", addres);
 
     let listner = TcpListener::bind(addres).await.unwrap();
 
