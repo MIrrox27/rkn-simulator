@@ -1,9 +1,11 @@
 // author https://github.com/MIrrox27/rkn-simulator
 // src/main.rs
 
+use axum::http::response;
 //use axum::{Router, routing::get, extract::Path};
 //use tower_http::services::ServeDir;
-use tokio::{io::{ AsyncReadExt, AsyncWriteExt}, net::{TcpListener}};
+use tokio::net::{TcpListener, TcpStream};
+use tokio::{io::{ AsyncReadExt, AsyncWriteExt}, stream};
 use std::io;
 
 
@@ -25,19 +27,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     loop {
-        let (mut socket, addr) =  listner.accept().await.unwrap();
+        let (mut stream, _) =  listner.accept().await.unwrap();
         println!("New connect {}", addr);
         
-        tokio::spawn( async move  {
-            let mut buf = vec![0; 1024];
+        tokio::spawn(handle(stream)); 
+    }
+}
 
-            loop {
-                match socket.read(&mut buf).await {
-                    Ok(0) => return, 
-                    Ok(n) => {if socket.write_all(&buf[..n]).await.is_err(){return ;}}
-                    Err(_) => return,
-                }
-            }
-        });
-    } 
+async fn handle (mut stream: TcpStream) {   
+    let mut buf = [0; 4096];
+    let n = stream.read(&mut buf).await.unwrap();
+    if n == 0 {return};
+
+    let request = String::from_utf8_lossy(&buf[..n]);
+    println!("Requets: {}", request);
+
+    let responce = "HTTP/1.1 200 OK\r\n\r\nShalom from your mother!";
+    stream.write_all(responce.as_bytes()).await.unwrap();
+
 }
