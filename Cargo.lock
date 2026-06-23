@@ -874,6 +874,7 @@ name = "rkn-simulator"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "cc",
  "reqwest",
  "tokio",
  "tower-http 0.5.2",
