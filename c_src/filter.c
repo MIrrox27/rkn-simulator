@@ -44,15 +44,25 @@ void append_to_blacklist(const char *text){
 
 void delete_from_blacklist(const char *text){
   DomensBlackList *current = global_list;
+  DomensBlackList *prev = NULL;
 
   while (current != NULL){
     DomensBlackList *temp = current;
     DomensBlackList *current_next = current->next;
+
+
     if (strcmp(current->str, text)){
-      free(temp);
+      if (prev == NULL) global_list = current_next;
+      else prev->next = current_next;
       current = current_next;
+
+      free(temp);
     } 
-    current = current->next;
+    else {
+      prev = current;
+      current = current_next;
+    }
+    
   } 
 }
 
