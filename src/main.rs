@@ -10,9 +10,9 @@ use std::io;
 
 
 extern "C" {
-    fn delete_from_blacklist(text: str);
-    fn add_to_blacklist(text: str);
-    fn search_domen(text: str);
+    fn delete_from_blacklist(domain: *const std::os::raw::c_char);
+    fn add_to_blacklist(domain: *const std::os::raw::c_char);
+    fn search_domen(domain: *const std::os::raw::c_char) -> std::os::raw::c_int;
 }
 
 #[tokio::main]
