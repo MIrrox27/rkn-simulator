@@ -9,11 +9,12 @@ use tokio::{io::{ AsyncReadExt, AsyncWriteExt}};
 use std::{io};
 use std::ffi::CString;
 use std::os::raw::c_char;
+use tokio::io::AsyncBufReadExt;
 
 
 extern "C" {
     //fn delete_from_blacklist(domain: *const std::os::raw::c_char);
-    //fn add_to_blacklist(domain: *const std::os::raw::c_char);
+    fn append_to_blacklist(domain: *const std::os::raw::c_char);
     fn search_domen(domain: *const std::os::raw::c_char) -> std::os::raw::c_int;
 }
 
@@ -29,18 +30,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Addres: http://{}", addres);
 
-    let listner = TcpListener::bind(addres).await.unwrap();
-    let addr_clone = addres.clone();
+    
+    //let addr_clone = addres.clone();
 
+    tokio::spawn(async {
+            let stdin = tokio::io::stdin();
+            let mut reader = tokio::io::BufReader::new(stdin);
+            let mut line = String::new();
+            
+            println!("Enter domain you want to block (or 'exit', to quit the program): ");
+            loop {
+                line.clear();
+                match reader.read_line(&mut line).await {
+                    Ok(0) => break,
+                    Ok(_) => {
+
+                        let domain = line.trim();
+                        if domain.is_empty() {continue;}
+                        if domain == "exit" {break;}
+                        add_domain_to_blacklist(domain);
+
+                    }
+                    Err(_) => break,
+                }
+            }
+        }); 
+    
+    let listner = TcpListener::bind(addres).await?;
     loop {
-        let (mut stream, _) =  listner.accept().await.unwrap();
+        let (mut stream, _) =  listner.accept().await?;
         println!("New connect {}", addr);
         
-        tokio::spawn(handle(stream, addr_clone)); 
+        tokio::spawn(handle(stream));
     }
 }
 
-async fn handle (mut stream: TcpStream, addres:&str) {   
+
+
+async fn handle (mut stream: TcpStream) {   
     let mut buf = [0; 4096];
     let n = stream.read(&mut buf).await.unwrap();
     if n == 0 {return};
@@ -48,50 +75,65 @@ async fn handle (mut stream: TcpStream, addres:&str) {
     let request = String::from_utf8_lossy(&buf[..n]);
     println!("Requets: {}", request);
 
-    
-    
-    let response;
-
     let first_line = if let Some(first_line) = request.lines().next(){first_line}
     else {""};
 
-    let response_body = process_domain(first_line).await;
-    if first_line != "Addres: ".to_string() + addres{
-       let response = response_body;
-    }
-    else {
-        response = "Initial connect";
-    }  
+    let response = search_domain_rst(&(process_domain(first_line).await));
     stream.write_all(response.as_bytes()).await.unwrap();
 
 }
 
 
 async fn process_domain(first_line: &str) -> String {
-    let sec_domain = if let Some(domain_) = first_line.split(' ').nth(1){
-        domain_}
-    else {
-        "error"
-    };
+    if first_line.starts_with("CONNECT"){
+        let domain_and_http = first_line.replacen("CONNECT ", "", 1);
+        let domain_and_http_vec: Vec<&str> = domain_and_http.split(":").collect();
+        let domain = domain_and_http_vec[0];
+        return domain.to_string();
+    }
+    else {  
+        let url_and_metgod: Vec<&str> = first_line.split(" ").collect();
+        if url_and_metgod.len() < 2 {
+            return "error".to_string(); // или обработка ошибки
+        }
+
+        let url = url_and_metgod[1];
+        
+        let url = if url.starts_with("http://"){
+            url.replacen("http://", "", 1).to_string()
+        }
+        else if url.starts_with("https://"){
+            url.replacen("https://", "", 1).to_string()
+        }
+        else {url.to_string()};
+
+        let url_and_port: Vec<&str> = url.split("/").collect();
+        let result = if url_and_port[0].contains(":") {
+            let parts: Vec<&str> = (url_and_port[0].split(":")).collect();
+            parts[0]
+
+        } else { url_and_port[0] };
+        return result.to_string();
+    }
+     
+}   
 
 
-    let domain: &str =
-    if let Some(domain_) = sec_domain.rsplit_once(':'){domain_.0}
-    else {" "};
-
+fn search_domain_rst(domain: &str) -> String{
     let c_domain = CString::new(domain).unwrap();
     let c_ptr: *const c_char = c_domain.as_ptr();
     let result = unsafe {search_domen(c_ptr)};
-    println!("Domain {} has status {}", domain, result);
-
-    let responce;
-    if result == 1 {
-        responce = "HTTP/1.1 200 OK\r\n\r\nДля тебя сайт заблокирован";
-    }
-    else {
-        responce = "HTTP/1.1 200 OK\r\n\r\nShalom from your mother!";
-    }
-
+    
+    let responce = 
+    if result == 1 { "HTTP/1.1 200 OK\r\n\r\nДля тебя сайт заблокирован"}
+    else { "HTTP/1.1 200 OK\r\n\r\nShalom from your mother!"};
     return responce.to_string();
+}
+
+fn add_domain_to_blacklist(domain: &str){
+    let c_domain = CString::new(domain).unwrap();
+    let c_ptr: *const c_char = c_domain.as_ptr();
+    unsafe {append_to_blacklist(c_ptr)};
+    println!("Domain {} added to blacklist", domain)
 
 }
