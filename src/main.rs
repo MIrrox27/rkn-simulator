@@ -10,7 +10,7 @@ use std::{io};
 use std::ffi::CString;
 use std::os::raw::c_char;
 use tokio::io::AsyncBufReadExt;
-
+use reqwest;
 
 extern "C" {
     //fn delete_from_blacklist(domain: *const std::os::raw::c_char);
@@ -139,3 +139,6 @@ fn add_domain_to_blacklist(domain: &str){
     println!("Domain {} added to blacklist", domain)
 
 }
+
+async fn handle_http(stream: TcpStream, domain: String, path: String){}
+async fn handle_connect(stream: TcpStream, domain: String, port: String){}
