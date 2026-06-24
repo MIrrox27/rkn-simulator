@@ -60,7 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let listner = TcpListener::bind(addres).await?;
     loop {
-        let (mut stream, _) =  listner.accept().await?;
+        let (stream, _) =  listner.accept().await?;
         println!("\n\nNew connect {}", addr);
         
         tokio::spawn(handle(stream));
@@ -127,7 +127,7 @@ fn search_domain_rst(domain: &str) -> String{
     let result = unsafe {search_domen(c_ptr)};
     
     let responce = 
-    if result == 1 { "HTTP/1.1 200 OK\r\n\r\nДля тебя сайт заблокирован"}
+    if result == 1 { "HTTP/1.1 200 OK\r\n\r\nHAHAHAHAHAH Website was blocked for yoy"}
     else { "HTTP/1.1 200 Connection established\r\n\r\n"};
     return responce.to_string();
 }
