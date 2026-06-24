@@ -69,11 +69,11 @@ void delete_from_blacklist(const char *text){ //
 
 int search_domen(const char *text){ // Поиск домена в списке
   DomensBlackList *current = global_list;
-  DomensBlackList *current_next = current->next;
+
 
   while (current != NULL){
     if (strcmp(current->str, text) == 0) return 1; // если домен есть вернет 1
-    current = current_next;
+    current = current->next;
   }
   return 0;
 }
