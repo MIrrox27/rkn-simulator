@@ -72,13 +72,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn handle (mut stream: TcpStream) {   
     let mut buf = [0; 4096];
     let n = stream.read(&mut buf).await.unwrap();
-    if n == 0 {return};
+    if n == 0 { return; }
 
     let request = String::from_utf8_lossy(&buf[..n]);
     println!("Requets: {}", request);
 
-    let first_line = if let Some(first_line) = request.lines().next(){first_line}
-    else {""};
+    let first_line = request.lines().next().unwrap_or("");
+
+
+    if first_line.starts_with("CONNECT") {
+        let domain = 
+    }
+
 
     let response = search_domain_rst(&(process_domain(first_line).await));
     stream.write_all(response.as_bytes()).await.unwrap();
@@ -110,12 +115,12 @@ async fn process_domain(first_line: &str) -> String {
         else {url.to_string()};
 
         let url_and_port: Vec<&str> = url.split("/").collect();
-        let result = if url_and_port[0].contains(":") {
+        let domain = if url_and_port[0].contains(":") {
             let parts: Vec<&str> = (url_and_port[0].split(":")).collect();
             parts[0]
-
         } else { url_and_port[0] };
-        return result.to_string();
+
+        return domain.to_string();
     }
      
 }   
@@ -148,4 +153,15 @@ async fn handle_http(stream: TcpStream, domain: String, path: String) -> String{
 
 
 }
-async fn handle_connect(stream: TcpStream, domain: String, port: String){}
+async fn handle_connect(stream: TcpStream, domain: String, port: String){
+    let server_stream = TcpStream::connect(format!("{}:{}", domain, port)).await?;
+}
+
+fn extract_domain_connect(first_line: &str) -> String{
+    let res = first_line.replacen("CONNECT", "", 1);
+    let host_port = res.split_whitespace().next().unwrap_or("");
+    let domain = host_port.split(':').next().unwrap_or("");
+    return domain.to_string();
+
+
+}
