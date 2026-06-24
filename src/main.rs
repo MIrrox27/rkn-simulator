@@ -128,7 +128,7 @@ fn search_domain_rst(domain: &str) -> String{
     
     let responce = 
     if result == 1 { "HTTP/1.1 200 OK\r\n\r\nДля тебя сайт заблокирован"}
-    else { "HTTP/1.1 200 OK\r\n\r\nShalom from your mother!"};
+    else { "HTTP/1.1 200 Connection established\r\n\r\n"};
     return responce.to_string();
 }
 
