@@ -140,5 +140,12 @@ fn add_domain_to_blacklist(domain: &str){
 
 }
 
-async fn handle_http(stream: TcpStream, domain: String, path: String){}
+async fn handle_http(stream: TcpStream, domain: String, path: String) -> String{  
+    let url = format!("http://{}{}", domain, path);
+    let response = reqwest::get(&url).await.unwrap();
+    let body = response.text().await.unwrap();
+    return format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}", body.len(), body);
+
+
+}
 async fn handle_connect(stream: TcpStream, domain: String, port: String){}
