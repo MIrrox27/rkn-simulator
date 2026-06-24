@@ -20,7 +20,9 @@ extern "C" {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!(" -- Please enter proxy addres [127.0.0.1:8000]>"); // Просим ввести адрес для прокси
+    add_domain_to_blacklist("example.com"); // тестовый 
+
+    println!("\n\n\n -- Please enter proxy addres [127.0.0.1:8000]>"); // Просим ввести адрес для прокси
     let mut addres = String::new();
     io::stdin().read_line(&mut addres)
         .expect("Error, can't read your addres");
@@ -59,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listner = TcpListener::bind(addres).await?;
     loop {
         let (mut stream, _) =  listner.accept().await?;
-        println!("New connect {}", addr);
+        println!("\n\nNew connect {}", addr);
         
         tokio::spawn(handle(stream));
     }
