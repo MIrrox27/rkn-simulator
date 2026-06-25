@@ -159,14 +159,14 @@ async fn handle_http(stream: TcpStream, domain: String, path: String) -> String{
 
 }
 async fn handle_connect(mut client_stream: TcpStream, domain: String, request: String){
-    
+        // Проверка домена 
     if is_domain_blocked(&domain) { // проверка домена 
         let response = "HTTP/1.1 403 Forbidden\r\n\r\nBlocked";
         client_stream.write_all(response.as_bytes()).await.unwrap();
         return;
     }
 
-
+        // Подключение 
     let addr = format!("{}:433", domain);
     let mut server_stream = match TcpStream::connect(addr).await {
         Ok(s) => s,
@@ -178,6 +178,17 @@ async fn handle_connect(mut client_stream: TcpStream, domain: String, request: S
         }
     };
 
+
+        // отправляем браузеру инфу, что все хорошо 
+    let response = "HTTP/1.1 200 Connection established\r\n\r\n";
+    client_stream.write_all(response.as_bytes()).await.unwrap();
+
+
+        // Делаем туннель
+    match tokio::io::copy_bidirectional(&mut client_stream, &mut server_stream).await {
+        Ok(_) => println!("Tunnel closed for {}", domain),
+        Err(e) => println!("Tunnel error: {}", e)
+    }
 }
 
 fn extract_domain_connect(first_line: &str) -> String{
