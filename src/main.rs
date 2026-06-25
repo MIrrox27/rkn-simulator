@@ -107,7 +107,9 @@ async fn handle_http(mut client_stream: TcpStream, domain: String, request: Stri
     }
 
     let first_line = request.lines().next().unwrap_or("");
-    let path = exact_path(first_line);
+    let path = extract_path(first_line); // 
+
+    let server_request = transform_request_for_server(&request, &domain, &path);
 
 }
 
@@ -147,6 +149,31 @@ async fn handle_connect(mut client_stream: TcpStream, domain: String, request: S
 }
 
 
+fn transform_request_for_server(request: &str, domain: &str, path: &str) -> String {
+    let mut lines: Vec<&str> = request.lines().collect();
+    
+    // Меняем первую строку
+    let first_line = lines[0];
+    let method = first_line.split_whitespace().next().unwrap_or("GET");
+    let new_first_line = format!("{} {} HTTP/1.1", method, path);
+    lines[0] = &new_first_line;
+    
+    // Добавляем/исправляем заголовок Host
+    let mut has_host = false;
+    for line in &mut lines {
+        if line.to_lowercase().starts_with("host:") {
+            *line = &format!("Host: {}", domain);
+            has_host = true;
+            break;
+        }
+    }
+    if !has_host {
+        lines.push(&format!("Host: {}", domain));
+    }
+    
+    lines.join("\r\n") + "\r\n\r\n"
+}
+
 
 fn extract_domain_connect(first_line: &str) -> String{
     let res = first_line.replacen("CONNECT", "", 1);
@@ -165,7 +192,7 @@ fn extract_path(first_line: &str) -> String {
     let url = parts[1];
     let url = url.trim_start_matches("http://").trim_start_matches("https://");
     let path = url.split('/').nth(1).unwrap_or("");
-    format!("/{}", path)
+    return format!("/{}", path);
 }
 
 
