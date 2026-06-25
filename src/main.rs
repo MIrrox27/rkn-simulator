@@ -111,6 +111,31 @@ async fn handle_http(mut client_stream: TcpStream, domain: String, request: Stri
 
     let server_request = transform_request_for_server(&request, &domain, &path);
 
+    // 4. Подключаемся к серверу
+    let addr = format!("{}:80", domain);
+    let mut server_stream = match TcpStream::connect(addr).await {
+        Ok(s) => s,
+        Err(_) => {
+            let response = "HTTP/1.1 502 Bad Gateway\r\n\r\n";
+            client_stream.write_all(response.as_bytes()).await.unwrap();
+            return;
+        }
+    };
+    
+    // 5. Отправляем запрос серверу
+    server_stream.write_all(server_request.as_bytes()).await.unwrap();
+    
+    // 6. Пересылаем ответ от сервера к клиенту
+    let mut response_buf = [0; 4096];
+    loop {
+        match server_stream.read(&mut response_buf).await {
+            Ok(0) => break, // Сервер закрыл соединение
+            Ok(n) => {
+                client_stream.write_all(&response_buf[..n]).await.unwrap();
+            }
+            Err(_) => break,
+        }
+    }
 }
 
 
