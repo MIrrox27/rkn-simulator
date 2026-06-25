@@ -2,11 +2,12 @@
 // src/main.rs
 
 
-use axum::http::response;
+use axum::http::{request, response};
 //use axum::{Router, routing::get, extract::Path};
 //use tower_http::services::ServeDir;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::{io::{ AsyncReadExt, AsyncWriteExt}};
+use std::intrinsics::exact_div;
 use std::{io};
 use std::ffi::CString;
 use std::os::raw::c_char;
@@ -87,12 +88,84 @@ async fn handle (mut stream: TcpStream) {
     }
     else {
         let domain = extract_domain_http().await;
+        handle_http(stream, domain, request).await;
     }
 
 
     let response = search_domain_rst(&(process_domain(first_line).await));
     stream.write_all(response.as_bytes()).await.unwrap();
 
+}
+
+
+
+async fn handle_http(mut client_stream: TcpStream, domain: String, request: String){  
+    if is_domain_blocked(&domain) {
+        let response = "HTTP/1.1 403 Forbidden\r\n\r\nBlocked";
+        client_stream.write_all(response.as_bytes()).await.unwrap();
+        return;
+    }
+
+    let first_line = request.lines().next().unwrap_or("");
+    let path = exact_path(first_line);
+
+}
+
+
+
+async fn handle_connect(mut client_stream: TcpStream, domain: String, request: String){
+        // Проверка домена 
+    if is_domain_blocked(&domain) { // проверка домена 
+        let response = "HTTP/1.1 403 Forbidden\r\n\r\nBlocked";
+        client_stream.write_all(response.as_bytes()).await.unwrap();
+        return;
+    }
+
+        // Подключение 
+    let addr = format!("{}:433", domain);
+    let mut server_stream = match TcpStream::connect(addr).await {
+        Ok(s) => s,
+        Err(_) => {
+            let response = "HTTP/1.1 502 Bad Gateway\r\n\r\n";
+            client_stream.write_all(response.as_bytes()).await.unwrap();
+            return ;
+
+        }
+    };
+
+
+        // отправляем браузеру инфу, что все хорошо 
+    let response = "HTTP/1.1 200 Connection established\r\n\r\n";
+    client_stream.write_all(response.as_bytes()).await.unwrap();
+
+
+        // Делаем туннель
+    match tokio::io::copy_bidirectional(&mut client_stream, &mut server_stream).await {
+        Ok(_) => println!("Tunnel closed for {}", domain),
+        Err(e) => println!("Tunnel error: {}", e)
+    }
+}
+
+
+
+fn extract_domain_connect(first_line: &str) -> String{
+    let res = first_line.replacen("CONNECT", "", 1);
+    let host_port = res.split_whitespace().next().unwrap_or("");
+    let domain = host_port.split(':').next().unwrap_or("");
+    return domain.to_string();
+
+
+}
+
+
+fn extract_path(first_line: &str) -> String {
+    let parts: Vec<&str> = first_line.split_whitespace().collect();
+    if parts.len() < 2 { return "/".to_string(); }
+    
+    let url = parts[1];
+    let url = url.trim_start_matches("http://").trim_start_matches("https://");
+    let path = url.split('/').nth(1).unwrap_or("");
+    format!("/{}", path)
 }
 
 
@@ -150,55 +223,7 @@ fn add_domain_to_blacklist(domain: &str){
 
 }
 
-async fn handle_http(stream: TcpStream, domain: String, path: String) -> String{  
-    let url = format!("http://{}{}", domain, path);
-    let response = reqwest::get(&url).await.unwrap();
-    let body = response.text().await.unwrap();
-    return format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}", body.len(), body);
 
-
-}
-async fn handle_connect(mut client_stream: TcpStream, domain: String, request: String){
-        // Проверка домена 
-    if is_domain_blocked(&domain) { // проверка домена 
-        let response = "HTTP/1.1 403 Forbidden\r\n\r\nBlocked";
-        client_stream.write_all(response.as_bytes()).await.unwrap();
-        return;
-    }
-
-        // Подключение 
-    let addr = format!("{}:433", domain);
-    let mut server_stream = match TcpStream::connect(addr).await {
-        Ok(s) => s,
-        Err(_) => {
-            let response = "HTTP/1.1 502 Bad Gateway\r\n\r\n";
-            client_stream.write_all(response.as_bytes()).await.unwrap();
-            return ;
-
-        }
-    };
-
-
-        // отправляем браузеру инфу, что все хорошо 
-    let response = "HTTP/1.1 200 Connection established\r\n\r\n";
-    client_stream.write_all(response.as_bytes()).await.unwrap();
-
-
-        // Делаем туннель
-    match tokio::io::copy_bidirectional(&mut client_stream, &mut server_stream).await {
-        Ok(_) => println!("Tunnel closed for {}", domain),
-        Err(e) => println!("Tunnel error: {}", e)
-    }
-}
-
-fn extract_domain_connect(first_line: &str) -> String{
-    let res = first_line.replacen("CONNECT", "", 1);
-    let host_port = res.split_whitespace().next().unwrap_or("");
-    let domain = host_port.split(':').next().unwrap_or("");
-    return domain.to_string();
-
-
-}
 
 async fn extract_domain_http(){}
 
