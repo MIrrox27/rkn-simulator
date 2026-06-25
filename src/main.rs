@@ -159,14 +159,24 @@ async fn handle_http(stream: TcpStream, domain: String, path: String) -> String{
 
 }
 async fn handle_connect(mut client_stream: TcpStream, domain: String, request: String){
-    if is_domain_blocked(&domain) {
+    
+    if is_domain_blocked(&domain) { // проверка домена 
         let response = "HTTP/1.1 403 Forbidden\r\n\r\nBlocked";
         client_stream.write_all(response.as_bytes()).await.unwrap();
         return;
     }
 
 
+    let addr = format!("{}:433", domain);
+    let mut server_stream = match TcpStream::connect(addr).await {
+        Ok(s) => s,
+        Err(_) => {
+            let response = "HTTP/1.1 502 Bad Gateway\r\n\r\n";
+            client_stream.write_all(response.as_bytes()).await.unwrap();
+            return ;
 
+        }
+    };
 
 }
 
