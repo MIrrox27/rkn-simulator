@@ -81,7 +81,11 @@ async fn handle (mut stream: TcpStream) {
 
 
     if first_line.starts_with("CONNECT") {
-        let domain = 
+        let domain = extract_domain_connect(first_line);
+        handle_connect(stream, domain, request).await;
+    }
+    else {
+        let domain = extract_domain_http().await;
     }
 
 
@@ -165,3 +169,5 @@ fn extract_domain_connect(first_line: &str) -> String{
 
 
 }
+
+async fn extract_domain_http(){}
